@@ -1,0 +1,29 @@
+fabric_dbt:
+  target: target_write
+  outputs:
+
+    source_readonly:
+      type: fabric
+      host: "{{ env_var('FABRIC_HOST') }}"
+      port: "{{ env_var('FABRIC_PORT') | int }}"
+      database: "{{ env_var('FABRIC_SOURCE_DATABASE') }}"
+      driver: ODBC Driver 17 for SQL Server
+      schema: "{{ env_var('FABRIC_SOURCE_SCHEMA') }}"
+      authentication: ServicePrincipal
+      tenant_id: "{{ env_var('FABRIC_TENANT_ID') }}"
+      client_id: "{{ env_var('FABRIC_CLIENT_ID') }}"
+      client_secret: "{{ env_var('FABRIC_CLIENT_SECRET') }}"
+      encrypt: true
+
+    target_write:
+      type: fabric
+      host: "{{ env_var('FABRIC_HOST') }}"
+      port: "{{ env_var('FABRIC_PORT') | int }}"
+      database: "{{ env_var('FABRIC_TARGET_DATABASE') }}"
+      driver: ODBC Driver 17 for SQL Server
+      schema: "{{ env_var('FABRIC_TARGET_SCHEMA') }}"
+      authentication: ServicePrincipal
+      tenant_id: "{{ env_var('FABRIC_TENANT_ID') }}"
+      client_id: "{{ env_var('FABRIC_CLIENT_ID') }}"
+      client_secret: "{{ env_var('FABRIC_CLIENT_SECRET') }}"
+      encrypt: true

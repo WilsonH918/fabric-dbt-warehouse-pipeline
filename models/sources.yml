@@ -1,0 +1,13 @@
+version: 2
+
+sources:
+  - name: lakehouse
+    database: wilson_fabric_lakehouse   # Lakehouse SQL endpoint
+    schema: DE_PROD_dbo                         # adjust if your tables are not in dbo
+    tables:
+      - name: accounts
+      - name: articles
+      - name: branches
+      - name: customers
+      - name: support_tickets
+      - name: transactions

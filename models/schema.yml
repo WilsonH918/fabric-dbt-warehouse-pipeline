@@ -1,0 +1,90 @@
+version: 2
+
+models:
+  - name: dim_accounts
+    description: >
+      Account dimension table containing descriptive attributes for customer accounts.
+      This table serves as the primary reference for all account-related joins.
+
+    meta:
+      layer: mart
+      grain: one row per account
+
+    columns:
+      - name: pk_account_id
+        description: Primary key uniquely identifying an account.
+        tests:
+          - not_null
+          - unique
+
+      - name: account_type
+        description: Classification of the account (e.g. savings, current).
+
+      - name: balance
+        description: Latest known account balance from the source system.
+
+  - name: fct_transactions
+    description: >
+      Fact table capturing individual financial transactions.
+      Each row represents a single transaction event linked to an account.
+
+    meta:
+      layer: mart
+      grain: one row per transaction
+
+    columns:
+      - name: pk_transaction_id
+        description: Primary key identifying a unique transaction.
+        tests:
+          - not_null
+          - unique
+
+      - name: fk_account_id
+        description: Foreign key referencing the related account.
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_accounts')
+              field: pk_account_id
+
+      - name: transaction_date
+        description: Date on which the transaction occurred.
+
+      - name: amount
+        description: Monetary value of the transaction.
+
+  - name: mart_transactions_accounts
+    description: >
+      Denormalised transactions mart combining transaction facts with
+      account attributes. Designed for direct consumption by BI tools
+      such as Power BI and ad-hoc analytics.
+
+    meta:
+      layer: mart
+      grain: one row per transaction
+
+    columns:
+      - name: pk_transaction_id
+        description: Primary key of the transaction record.
+        tests:
+          - not_null
+          - unique
+
+      - name: fk_account_id
+        description: Foreign key linking transactions to accounts.
+        tests:
+          - not_null
+
+      - name: transaction_date
+        description: Date the transaction was recorded.
+
+      - name: amount
+        description: Transaction amount.
+        tests:
+          - not_null
+
+      - name: account_type
+        description: Type of account associated with the transaction.
+
+      - name: balance
+        description: Account balance from the account dimension.
