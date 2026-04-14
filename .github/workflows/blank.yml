@@ -1,0 +1,54 @@
+name: dbt CI
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  dbt-ci:
+    runs-on: ubuntu-latest
+
+    env:
+      FABRIC_HOST: ${{ secrets.FABRIC_HOST }}
+      FABRIC_PORT: ${{ secrets.FABRIC_PORT }}
+      FABRIC_TENANT_ID: ${{ secrets.FABRIC_TENANT_ID }}
+      FABRIC_CLIENT_ID: ${{ secrets.FABRIC_CLIENT_ID }}
+      FABRIC_CLIENT_SECRET: ${{ secrets.FABRIC_CLIENT_SECRET }}
+      FABRIC_DATABASE: ${{ secrets.FABRIC_DATABASE }}
+      FABRIC_SCHEMA: ${{ secrets.FABRIC_SCHEMA }}
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install dbt
+        run: |
+          pip install dbt-core dbt-fabric   # adjust adapter name
+
+      - name: Install ODBC Driver 17 for SQL Server
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y curl apt-transport-https gnupg
+          curl https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
+          curl https://packages.microsoft.com/config/ubuntu/22.04/prod.list | sudo tee /etc/apt/sources.list.d/mssql-release.list
+          sudo apt-get update
+          sudo ACCEPT_EULA=Y apt-get install -y msodbcsql17
+
+      - name: Install dependencies
+        run: dbt deps
+
+      - name: Compile
+        run: dbt compile
+
+      - name: Run models
+        run: dbt run
+
+      - name: Test models
+        run: dbt test
