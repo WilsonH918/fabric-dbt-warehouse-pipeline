@@ -1,90 +1,247 @@
 version: 2
 
 models:
-  - name: dim_accounts
+  - name: gld_dim_date
     description: >
-      Account dimension table containing descriptive attributes for customer accounts.
-      This table serves as the primary reference for all account-related joins.
+      Gold date dimension providing a canonical calendar for all reporting and
+      analytical use cases. This table is used to standardise date-based joins
+      across fact tables and supports time-based filtering, grouping, and trend
+      analysis.
 
     meta:
-      layer: mart
-      grain: one row per account
+      layer: gold
+      grain: one row per calendar date
 
     columns:
-      - name: pk_account_id
-        description: Primary key uniquely identifying an account.
+      - name: date_key
+        description: Surrogate primary key for the date dimension in YYYYMMDD format.
         tests:
           - not_null
           - unique
 
-      - name: account_type
-        description: Classification of the account (e.g. savings, current).
+      - name: date
+        description: The calendar date.
 
-      - name: balance
-        description: Latest known account balance from the source system.
+      - name: year
+        description: Calendar year derived from the date.
 
-  - name: fct_transactions
+      - name: quarter
+        description: Calendar quarter of the year (1–4).
+
+      - name: month
+        description: Calendar month number (1–12).
+
+      - name: day
+        description: Day of month.
+
+      - name: day_of_week
+        description: ISO day of week number where Monday = 1 and Sunday = 7.
+
+      - name: week_of_year
+        description: ISO week number of the year.
+
+      - name: is_weekend
+        description: Flag indicating whether the date falls on a weekend.
+
+
+  - name: gld_dim_symbol
     description: >
-      Fact table capturing individual financial transactions.
-      Each row represents a single transaction event linked to an account.
+      Gold symbol dimension containing descriptive and reference attributes
+      for traded instruments. This table represents the primary lookup for
+      symbol-level information and is used for all symbol-related joins
+      from financial fact tables.
 
     meta:
-      layer: mart
-      grain: one row per transaction
+      layer: gold
+      grain: one row per symbol
 
     columns:
-      - name: pk_transaction_id
-        description: Primary key identifying a unique transaction.
+      - name: pk_symbol
+        description: Primary key uniquely identifying a symbol.
         tests:
           - not_null
           - unique
 
-      - name: fk_account_id
-        description: Foreign key referencing the related account.
+      - name: symbol
+        description: Ticker symbol used to identify the instrument.
+        tests:
+          - not_null
+          - unique
+
+      - name: ticker
+        description: Exchange-specific ticker identifier.
+
+      - name: company_name
+        description: Legal or commonly used name of the company.
+
+      - name: exchange
+        description: Exchange on which the symbol is primarily traded.
+
+      - name: country
+        description: Country of incorporation or primary listing.
+
+      - name: currency
+        description: Trading currency for the symbol.
+
+      - name: industry
+        description: Industry classification provided by the source system.
+
+      - name: ipo_date
+        description: Date the company completed its initial public offering.
+
+      - name: market_cap
+        description: Latest known market capitalisation of the company.
+
+      - name: shares_outstanding
+        description: Number of shares outstanding.
+
+      - name: web_url
+        description: Official company website URL.
+
+      - name: logo_url
+        description: URL pointing to the company logo.
+
+
+  - name: gld_fact_basic_financials
+    description: >
+      Gold fact table capturing company-level financial metrics sourced from
+      Finnhub basic financials. Each row represents a single metric observation
+      for a symbol at a specific point in time, linked to the symbol and date
+      dimensions via foreign keys.
+
+    meta:
+      layer: gold
+      grain: one row per symbol per metric per date
+
+    columns:
+      - name: pk_basic_financials
+        description: Primary key uniquely identifying a financial metric record.
+        tests:
+          - not_null
+          - unique
+
+      - name: fk_symbol
+        description: Foreign key referencing the related symbol in dim_symbol.
         tests:
           - not_null
           - relationships:
-              to: ref('dim_accounts')
-              field: pk_account_id
+              to: ref('gld_dim_symbol')
+              field: pk_symbol
 
-      - name: transaction_date
-        description: Date on which the transaction occurred.
+      - name: fk_date_key
+        description: Foreign key referencing the related date in dim_date.
+        tests:
+          - not_null
+          - relationships:
+              to: ref('gld_dim_date')
+              field: date_key
 
-      - name: amount
-        description: Monetary value of the transaction.
+      - name: symbol
+        description: Natural key ticker symbol for traceability and debugging.
 
-  - name: mart_transactions_accounts
+      - name: retrieved_at_utc
+        description: UTC timestamp when the metric was retrieved from the source API.
+
+      - name: metric_date
+        description: Effective date of the financial metric, resolved from the source data.
+
+      - name: record_type
+        description: Indicator of whether the metric originates from point-in-time metrics or time series data.
+
+      - name: metric_name
+        description: Name of the financial metric (e.g. peRatio, netMargin).
+
+      - name: period_type
+        description: Period classification for time series metrics (e.g. annual, quarterly).
+
+      - name: period
+        description: Reporting period associated with the metric value.
+
+      - name: value_num
+        description: Numeric value of the financial metric where applicable.
+
+      - name: value_str
+        description: String representation of the metric value when not numeric.
+
+
+  - name: gld_financials_denorm
     description: >
-      Denormalised transactions mart combining transaction facts with
-      account attributes. Designed for direct consumption by BI tools
-      such as Power BI and ad-hoc analytics.
+      Denormalised gold mart combining financial metrics with symbol and date
+      attributes into a single wide table. This model is designed for direct
+      consumption by BI tools such as Power BI and for ad-hoc analytical queries,
+      eliminating the need for runtime joins.
 
     meta:
-      layer: mart
-      grain: one row per transaction
+      layer: gold
+      grain: one row per symbol per metric per date
 
     columns:
-      - name: pk_transaction_id
-        description: Primary key of the transaction record.
+      - name: pk_basic_financials
+        description: Primary key of the underlying financial metric record.
         tests:
           - not_null
           - unique
 
-      - name: fk_account_id
-        description: Foreign key linking transactions to accounts.
+      - name: fk_symbol
+        description: Foreign key linking the record to the symbol dimension.
         tests:
           - not_null
 
-      - name: transaction_date
-        description: Date the transaction was recorded.
-
-      - name: amount
-        description: Transaction amount.
+      - name: fk_date_key
+        description: Foreign key linking the record to the date dimension.
         tests:
           - not_null
 
-      - name: account_type
-        description: Type of account associated with the transaction.
+      - name: symbol
+        description: Ticker symbol associated with the metric.
 
-      - name: balance
-        description: Account balance from the account dimension.
+      - name: ticker
+        description: Exchange-specific ticker identifier.
+
+      - name: company_name
+        description: Name of the company associated with the symbol.
+
+      - name: exchange
+        description: Exchange on which the symbol is traded.
+
+      - name: country
+        description: Country associated with the symbol.
+
+      - name: currency
+        description: Currency in which the metric is reported.
+
+      - name: industry
+        description: Industry classification of the company.
+
+      - name: metric_date
+        description: Effective date of the financial metric.
+
+      - name: year
+        description: Calendar year of the metric date.
+
+      - name: quarter
+        description: Calendar quarter of the metric date.
+
+      - name: month
+        description: Calendar month of the metric date.
+
+      - name: week_of_year
+        description: Calendar week number of the metric date.
+
+      - name: retrieved_at_utc
+        description: UTC timestamp when the metric was retrieved.
+
+      - name: metric_name
+        description: Name of the financial metric.
+
+      - name: period_type
+        description: Period classification for the metric.
+
+      - name: period
+        description: Reporting period of the metric.
+
+      - name: value_num
+        description: Numeric metric value used for analysis and aggregation.
+
+      - name: value_str
+        description: Non-numeric metric value where applicable.
