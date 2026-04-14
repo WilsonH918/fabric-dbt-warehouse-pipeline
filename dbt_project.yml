@@ -15,5 +15,14 @@ clean-targets:
 
 models:
   fabric_dbt:
-    example:
+    bronze:
+      +schema: bronze
       +materialized: view
+
+    silver:
+      +schema: silver
+      +materialized: table
+
+    gold:
+      +schema: gold
+      +materialized: table
