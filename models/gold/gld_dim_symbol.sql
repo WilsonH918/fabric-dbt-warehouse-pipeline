@@ -1,7 +1,7 @@
 {{ config(materialized='table') }}
 
 select
-    pk_symbol,
+    null as pk_symbol,
     symbol,
     company_name,
     exchange,
