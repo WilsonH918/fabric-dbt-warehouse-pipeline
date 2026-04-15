@@ -1,7 +1,7 @@
 {{ config(materialized='table') }}
 
 select
-    null as pk_symbol,
+    pk_symbol,
     symbol,
     company_name,
     exchange,
@@ -11,7 +11,6 @@ select
     ipo_date,
     market_cap,
     shares_outstanding,
-    web_url,
-    null as test
+    web_url
 from {{ ref('slv_dim_symbol') }}
 where symbol is not null
