@@ -11,6 +11,7 @@ select
     ipo_date,
     market_cap,
     shares_outstanding,
-    web_url
+    web_url,
+    null as test
 from {{ ref('slv_dim_symbol') }}
 where symbol is not null
