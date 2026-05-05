@@ -10,6 +10,7 @@ select
     period,
     value_num,
     value_str,
-    value_date
+    value_date,
+    '' as demo
 from {{ source('bronze', 'fact_basic_financials') }}
 where symbol is not null
